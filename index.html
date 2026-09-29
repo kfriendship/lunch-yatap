@@ -70,6 +70,7 @@ h2{font-size:17px;margin:0}
 .item .nm{font-weight:700;min-width:0}
 .item .nm a{color:inherit;text-decoration:none}
 .item .nm a:hover{text-decoration:underline}
+.pick{display:inline-block;vertical-align:2px;margin-left:6px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:2px 7px;border-radius:999px;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
 .item .ds{grid-column:1;font-size:13px;color:var(--muted)}
 .item .ds .w{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .item button{grid-row:1/span 2;grid-column:2;appearance:none;border:1px solid var(--line);background:transparent;color:var(--muted);font:inherit;font-size:13px;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
@@ -235,6 +236,7 @@ const R=[
  ["스시윤","일식","초밥·롤",37.412178,127.129845,2,"782887644"],
  ["인더비엣 야탑직영점","아시안","쌀국수·동남아",37.412151,127.129856,2,"1044197010"]
 ];
+const PICKS=new Set(["용호낙지 성남시청점"]); // 주인장 pick
 const CATS=["한식","중식","일식","분식","양식","아시안","샐러드","고기"];
 const CAT_LABEL={분식:"분식·도시락",양식:"양식·버거",고기:"고깃집 점심"};
 const DEFAULT_CATS=CATS.filter(c=>c!=="고기");
@@ -303,7 +305,7 @@ function render(){
   list.forEach(r=>{
     const off=state.skip.has(r.name), isRec=rec.has(r.name);
     const li=document.createElement("li");li.className="item"+(off||isRec?" off":"");
-    li.innerHTML=`<span class="nm"><a href="${mapUrl(r)}" target="_blank" rel="noopener"></a></span>
+    li.innerHTML=`<span class="nm"><a href="${mapUrl(r)}" target="_blank" rel="noopener"></a>${PICKS.has(r.name)?'<span class="pick">주인장 pick</span>':""}</span>
       <span class="ds">${r.cat} · ${r.menu} · <span class="w">도보 ${r.walk}분</span>${r.area==="야탑역 쪽"?" · 야탑역 쪽":""}${r.price===1?" · 가성비":""}${isRec?" · 최근 먹음":""}</span>
       <button type="button"></button>`;
     li.querySelector("a").textContent=r.name;
@@ -316,7 +318,7 @@ function render(){
 function showResult(r){
   state.current=r;
   $("reelName").textContent=r.name;
-  $("meta").innerHTML=`<span class="tag">${r.cat}</span><span><b>${r.menu}</b></span><span>도보 약 <b>${r.walk}분</b></span><span>${r.area}</span>${r.price===1?"<span>가성비</span>":""}`;
+  $("meta").innerHTML=`<span class="tag">${r.cat}</span>${PICKS.has(r.name)?'<span class="pick" style="margin-left:0">주인장 pick</span>':""}<span><b>${r.menu}</b></span><span>도보 약 <b>${r.walk}분</b></span><span>${r.area}</span>${r.price===1?"<span>가성비</span>":""}`;
   $("mapLink").href=mapUrl(r);$("mapLink").hidden=false;
   $("decide").hidden=false;$("decide").textContent="여기로 결정";$("decide").disabled=false;
   $("spin").textContent="다시 뽑기";
