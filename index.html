@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>마커스빌딩 점심 뽑기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: single column "식권 발매기" — controls on top, ticket-style result, candidate list below */
+:root{
+  --bg:#F3F4EF; --paper:#FFFFFF; --ink:#1E2433; --muted:#646B7A; --line:#DADCD3;
+  --accent:#C7372A; --accent-ink:#FFFFFF; --mustard:#E4AE2F; --chip:#E7E9E1;
+  --display:"Black Han Sans","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171F; --paper:#1D212C; --ink:#ECEDF0; --muted:#9AA0AE; --line:#2F3442;
+  --accent:#E8574A; --accent-ink:#1A0F0E; --mustard:#E9B949; --chip:#262B37; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171F; --paper:#1D212C; --ink:#ECEDF0; --muted:#9AA0AE; --line:#2F3442;
+  --accent:#E8574A; --accent-ink:#1A0F0E; --mustard:#E9B949; --chip:#262B37; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:500}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,8vw,48px);line-height:1.05;margin:0;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{color:var(--muted);margin:2px 0 0;font-size:14px}
+.panel{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.label{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.06em;min-width:56px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;font-size:14px;padding:6px 12px;border-radius:999px;cursor:pointer;transition:background .15s,border-color .15s}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,.btn:focus-visible,.item button:focus-visible,a:focus-visible{outline:2px solid var(--mustard);outline-offset:2px}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+
+/* ticket */
+.ticket{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 22px 18px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.ticket::before,.ticket::after{content:"";position:absolute;top:118px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.ticket::before{left:-12px}.ticket::after{right:-12px}
+.tk-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.tk-no{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.reel{height:64px;display:flex;align-items:center;min-width:0}
+.reel-name{font-family:var(--display);font-size:clamp(28px,7vw,40px);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.reel.spinning .reel-name{color:var(--muted)}
+.perf{border-top:2px dashed var(--line);margin:0 -22px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px;color:var(--muted);min-height:22px}
+.meta b{color:var(--ink);font-weight:500}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--mustard);color:#1E2433}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;border:0;font:inherit;font-weight:700;font-size:15px;padding:12px 18px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-main{background:var(--accent);color:var(--accent-ink);flex:1 1 180px;justify-content:center;font-size:17px}
+.btn-main:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost{background:var(--chip);color:var(--ink)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+
+/* list */
+.list-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2{font-size:17px;margin:0}
+.count{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 16px;border-top:1px solid var(--line);align-items:center}
+.item:first-child{border-top:0}
+.item.off{opacity:.45}
+.item .nm{font-weight:700;min-width:0}
+.item .nm a{color:inherit;text-decoration:none}
+.item .nm a:hover{text-decoration:underline}
+.item .ds{grid-column:1;font-size:13px;color:var(--muted)}
+.item .ds .w{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.item button{grid-row:1/span 2;grid-column:2;appearance:none;border:1px solid var(--line);background:transparent;color:var(--muted);font:inherit;font-size:13px;padding:5px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.item.off button{color:var(--accent);border-color:var(--accent)}
+.empty{padding:20px 16px;color:var(--muted);font-size:14px}
+footer{font-size:12px;color:var(--muted);line-height:1.6}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">CLOBOT · 마커스빌딩 (중원구 양현로405번길 4-5, 여수동)</span>
+    <h1>오늘 점심 <em>뭐 먹지</em></h1>
+    <p class="sub">성남시청 앞 여수동 식당 100여 곳 중에서 하나 골라드려요.</p>
+  </header>
+
+  <section class="panel" aria-label="조건">
+    <div class="row" id="cats"><span class="label">종류</span></div>
+    <div class="row" id="walks"><span class="label">도보</span></div>
+    <div class="row"><span class="label">옵션</span>
+      <label class="toggle"><input type="checkbox" id="optRecent" checked> 최근 3일 먹은 곳 빼기</label>
+      <label class="toggle"><input type="checkbox" id="optCheap"> 가성비만</label>
+    </div>
+  </section>
+
+  <section class="ticket" aria-live="polite">
+    <div class="tk-head"><span>오늘의 점심 식권</span><span class="tk-no" id="tkNo"></span></div>
+    <div class="reel" id="reel"><span class="reel-name" id="reelName">버튼을 눌러 뽑아보세요</span></div>
+    <div class="perf" aria-hidden="true"></div>
+    <div class="meta" id="meta"><span id="poolInfo"></span></div>
+    <div class="actions">
+      <button class="btn btn-main" id="spin">점심 뽑기</button>
+      <a class="btn btn-ghost" id="mapLink" href="#" target="_blank" rel="noopener" hidden>카카오맵에서 보기</a>
+      <button class="btn btn-ghost" id="decide" hidden>여기로 결정</button>
+    </div>
+    <p class="hint" id="hint" hidden></p>
+  </section>
+
+  <section class="panel">
+    <div class="list-head"><h2>후보 식당</h2><span class="count" id="count"></span></div>
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <footer>
+    거리는 마커스빌딩 기준 직선거리로 계산한 대략적인 도보 시간이에요. 식당 목록은 2026년 9월 카카오맵 기준이라 휴무·폐업 여부는 가기 전에 지도에서 확인해 주세요.
+    "여기로 결정"과 "오늘 제외"는 이 브라우저에만 저장돼요.
+  </footer>
+</div>
+
+<script>
+const ORIGIN={lat:37.41745,lng:127.12771};
+// [이름, 종류, 메뉴, 위도, 경도, 가성비(1)/보통(2), 카카오맵 ID] — 카카오맵 기준 2026-09
+const R=[
+ ["콩두주백 분당직영점","한식","두부요리",37.417445,127.127397,2,"1389435490"],
+ ["고봉민김밥인 성남시청점","분식","김밥",37.417087,127.127664,1,"1521350312"],
+ ["덕발장","중식","만두·중식",37.41708,127.12784,2,"1417093693"],
+ ["라쿵푸마라탕 성남시청점","중식","마라탕",37.417585,127.126994,2,"1902557119"],
+ ["립보이","고기","고기·점심특선",37.41727,127.126873,2,"1276941486"],
+ ["호차이니즈","중식","중식",37.417245,127.126882,2,"1521673848"],
+ ["본도시락 성남시청점","분식","도시락",37.417718,127.126872,1,"26337336"],
+ ["성성칼국수","한식","국수",37.418162,127.127285,1,"1399078338"],
+ ["마리분식 성남여수동시청점","분식","분식",37.417047,127.126848,1,"1679593817"],
+ ["짱구네 낙지 성남시청점","한식","낙지",37.418293,127.128098,1,"887855113"],
+ ["비스트로 언더쿠바","양식","쿠바샌드위치",37.418377,127.12819,2,"966694194"],
+ ["백채김치찌개 성남시청점","한식","찌개",37.417662,127.126431,1,"1290027932"],
+ ["본죽&비빔밥cafe 성남신시청점","한식","죽·비빔밥",37.417661,127.126431,2,"1438361592"],
+ ["라라멘 본점","일식","라멘",37.417462,127.126411,2,"256741823"],
+ ["오투닭갈비&부대찌개 성남시청점","고기","닭갈비·부대찌개",37.418245,127.126861,2,"24432605"],
+ ["설담재","한식","설렁탕",37.41728,127.126397,2,"1567582704"],
+ ["두번먹는명인김치찜","한식","김치찜",37.417242,127.126403,1,"861783680"],
+ ["써브웨이 성남시청점","양식","샌드위치",37.41707,127.126425,2,"1509367480"],
+ ["밥엔청국장 성남시청점","한식","청국장",37.417975,127.126427,2,"1173674688"],
+ ["용호낙지 성남시청점","한식","낙지",37.417975,127.126427,2,"170998782"],
+ ["청마루","고기","고기·점심특선",37.417975,127.126423,2,"27325282"],
+ ["오토김밥 성남시청점","분식","김밥",37.418518,127.126895,1,"1471589446"],
+ ["서퍼스포케 성남시청점","샐러드","샐러드",37.418171,127.126416,2,"2059894498"],
+ ["초밥24 성남시청점","일식","초밥·롤",37.418187,127.126421,2,"1002768448"],
+ ["채선당도시락&샐러드 성남시청점","분식","도시락·샐러드",37.418569,127.126964,1,"145894026"],
+ ["초원숯불갈매기살","고기","고기·점심특선",37.417042,127.126132,2,"18488650"],
+ ["박가네김밥통통","분식","김밥",37.418601,127.126826,1,"1239292642"],
+ ["연가츠","일식","돈까스·우동",37.418368,127.126419,2,"1872370215"],
+ ["송정갈비","고기","고기·점심특선",37.418168,127.126101,2,"603867020"],
+ ["오와스시 성남점","일식","초밥·롤",37.418577,127.12641,2,"244759521"],
+ ["명백집 성남시청점","고기","고기·점심특선",37.418331,127.126115,2,"761276530"],
+ ["고향엄마손생바지락칼국수 성남시청직영점","한식","국수",37.417315,127.12577,1,"760797997"],
+ ["고야식당","고기","고기·점심특선",37.417096,127.125569,2,"1656448770"],
+ ["놀부부대찌개&철판구이","한식","부대찌개",37.418354,127.125755,1,"18612789"],
+ ["판다 짜장면집","중식","중식",37.417721,127.125256,2,"220609116"],
+ ["지베","양식","샌드위치",37.418578,127.12554,2,"921205145"],
+ ["삼천포횟집밀과함께","한식","회·물회",37.418148,127.125246,2,"1067969324"],
+ ["두부진미 본점","한식","두부요리",37.41732,127.125077,2,"1854546859"],
+ ["면통단","일식","우동",37.417263,127.124795,2,"26567735"],
+ ["미면소 성남시청점","아시안","쌀국수",37.41772,127.12479,2,"321686693"],
+ ["보릿고개 분당점","한식","보리밥",37.417456,127.124751,2,"1021032318"],
+ ["수타손짬뽕고수","중식","중식",37.417069,127.124776,2,"15249352"],
+ ["화리화리","한식","쭈꾸미",37.41793,127.124769,2,"369231698"],
+ ["애햄부대찌개 성남본점","한식","부대찌개",37.418567,127.12499,1,"457415781"],
+ ["한우왕돼지왕","고기","고기·점심특선",37.418274,127.124794,2,"378261685"],
+ ["흑돼지 엔 제주","고기","고기·점심특선",37.418971,127.130726,2,"822793042"],
+ ["집게집 야탑직영점","한식","조개·해물",37.417078,127.131423,2,"171902837"],
+ ["찐대패삼겹살","고기","고기·점심특선",37.418938,127.131048,2,"1886506313"],
+ ["사철갈매기","고기","고기·점심특선",37.417104,127.131706,2,"11323514"],
+ ["인사동토속음식점","한식","한정식·생선",37.419206,127.131147,2,"24325084"],
+ ["홍박사생고기 본점","고기","고기·점심특선",37.417151,127.13188,2,"1660595634"],
+ ["고궁","중식","중식",37.419392,127.131143,2,"21535867"],
+ ["대일만두","분식","만두",37.419192,127.131328,1,"395550719"],
+ ["셀럽","샐러드","샐러드",37.42002,127.130778,2,"1337729082"],
+ ["홍박사생고기 신관","고기","고기·점심특선",37.417131,127.132191,2,"43103858"],
+ ["더사계 본점","고기","고기·점심특선",37.417161,127.132336,2,"296403651"],
+ ["사계진미 야탑본점","한식","콩국수·국수",37.41712,127.132496,1,"13133178"],
+ ["동대문엽기떡볶이 야탑점","분식","떡볶이",37.413449,127.12918,1,"26581538"],
+ ["24시전주명가콩나물국밥 야탑점","한식","국밥",37.413626,127.125367,1,"1174053968"],
+ ["1992덮밥짜글이 야탑점","한식","찌개",37.413494,127.125504,1,"1662606559"],
+ ["큰집멸치국수 야탑점","한식","국수",37.413482,127.125506,1,"1751824833"],
+ ["왓더버거 야탑점","양식","햄버거",37.41348,127.125513,2,"577815947"],
+ ["연희시오 야탑점","일식","라멘",37.413479,127.125511,2,"2056148937"],
+ ["쿠모야","일식","초밥·롤",37.41309,127.127281,2,"1697903709"],
+ ["송이찌개마을 야탑점","한식","찌개",37.413125,127.125765,1,"14704400"],
+ ["송쉐프 야탑점","중식","중식",37.413115,127.129725,2,"1227349434"],
+ ["선비칼국수 성남분당야탑점","한식","국수",37.413058,127.125519,1,"837434838"],
+ ["갓잇 분당야탑점","양식","멕시칸·브라질",37.412817,127.126372,2,"591859300"],
+ ["홍코코로스시","일식","초밥·롤",37.412917,127.12583,2,"284560516"],
+ ["춘향골남원추어탕","한식","추어탕",37.413381,127.130881,2,"16592438"],
+ ["일품","아시안","쌀국수·동남아",37.41284,127.129721,2,"322123396"],
+ ["제주은희네해장국 분당야탑점","한식","해장국",37.412845,127.129857,1,"116206964"],
+ ["꿀꿀진순대 야탑점","한식","순대",37.412839,127.129852,1,"2128936583"],
+ ["깡우동 야탑점","일식","돈까스·우동",37.413041,127.130653,2,"1048823436"],
+ ["움버거앤윙스 분당야탑점","양식","버거",37.412694,127.125796,2,"91062105"],
+ ["초록지붕전주명가 본점","한식","해장국",37.413126,127.130874,1,"9392365"],
+ ["미분당 야탑점","아시안","쌀국수·동남아",37.412678,127.125782,2,"586569106"],
+ ["화화돼지왕갈비 분당야탑점","고기","고기·점심특선",37.412577,127.125754,2,"837980536"],
+ ["유치회관 야탑직영점","한식","해장국",37.412534,127.12579,1,"1201358311"],
+ ["머무를 정 세이로무시 야탑점","일식","세이로무시",37.41313,127.131292,2,"56740016"],
+ ["모박사부대찌개","한식","부대찌개",37.412534,127.125632,1,"8329167"],
+ ["현대옥 분당야탑점","한식","국밥",37.412523,127.125492,1,"22962997"],
+ ["원두막한식뷔페","한식","한식뷔페",37.412528,127.125471,2,"8036235"],
+ ["샬롬돈가스 야탑본점","일식","돈까스·우동",37.412503,127.125313,2,"25474365"],
+ ["찰리스버거 야탑점","양식","햄버거",37.412519,127.125253,2,"1575806946"],
+ ["서현실비 야탑직영점","고기","고기·점심특선",37.412798,127.131058,2,"918076471"],
+ ["장찬기김밥 야탑점","분식","김밥",37.412173,127.126377,1,"364532810"],
+ ["역전우동0410 야탑역점","일식","돈까스·우동",37.412064,127.127303,2,"1110193254"],
+ ["부성초밥 야탑본점","일식","초밥·롤",37.412065,127.127304,2,"340955311"],
+ ["마라섬 성남야탑점","중식","마라탕",37.412421,127.130218,2,"290398302"],
+ ["양복점 야탑점","중식","중식",37.412428,127.130226,2,"1210626384"],
+ ["국밥장인 야탑역점","한식","국밥",37.412043,127.12729,1,"848579397"],
+ ["현풍닭칼국수 분당야탑점","한식","국수",37.412043,127.12729,1,"1325355303"],
+ ["슬로우캘리 야탑역점","샐러드","샐러드",37.412037,127.12728,2,"2090334502"],
+ ["보배반점 야탑직영점","중식","중식",37.412543,127.130683,2,"1700058809"],
+ ["영심이떡볶이&김밥 야탑점","분식","떡볶이",37.412245,127.129752,1,"17111621"],
+ ["고향옥얼큰순대국 야탑점","한식","국밥",37.412074,127.126391,1,"1227255841"],
+ ["스프링롤명가 분당야탑점","샐러드","샐러드",37.412074,127.126391,2,"1546337842"],
+ ["벤탄빌라 야탑점","아시안","쌀국수·동남아",37.412074,127.126391,2,"413139944"],
+ ["롯데리아 야탑역점","양식","버거",37.411973,127.127727,2,"21321652"],
+ ["윤가네용대리황태국","한식","국밥",37.412065,127.126388,1,"2102434697"],
+ ["스파게티올리브0904","양식","이탈리안",37.411964,127.12728,2,"787459712"],
+ ["롤링파스타 야탑역점","양식","이탈리안",37.4122,127.12983,2,"687426226"],
+ ["이소정카츠","일식","돈까스·우동",37.412183,127.129849,2,"1222381445"],
+ ["유니춘천닭갈비","고기","닭갈비",37.41193,127.127131,2,"14634248"],
+ ["스시윤","일식","초밥·롤",37.412178,127.129845,2,"782887644"],
+ ["인더비엣 야탑직영점","아시안","쌀국수·동남아",37.412151,127.129856,2,"1044197010"]
+];
+const CATS=["한식","중식","일식","분식","양식","아시안","샐러드","고기"];
+const CAT_LABEL={분식:"분식·도시락",양식:"양식·버거",고기:"고깃집 점심"};
+const DEFAULT_CATS=CATS.filter(c=>c!=="고기");
+const areaOf=lat=>lat<37.4155?"야탑역 쪽":"여수동";
+const WALKS=[[3,"3분"],[5,"5분"],[8,"8분 (여수동 전체)"],[99,"야탑역 쪽까지"]];
+
+function walkMin(lat,lng){
+  const dx=(lng-ORIGIN.lng)*88200, dy=(lat-ORIGIN.lat)*111000;
+  return Math.max(1,Math.round(Math.hypot(dx,dy)*1.3/70));
+}
+const DATA=R.map(([name,cat,menu,lat,lng,price,kid],i)=>({id:i,name,cat,menu,price,kid,area:areaOf(lat),walk:walkMin(lat,lng)}))
+  .sort((a,b)=>a.walk-b.walk);
+
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+const today=new Date().toISOString().slice(0,10);
+let state={
+  cats:new Set(store.get("lunch.cats2",DEFAULT_CATS)),
+  walk:store.get("lunch.walk3",8),
+  history:store.get("lunch.history",[]), // [{name,date}]
+  skip:(()=>{const s=store.get("lunch.skip",{date:today,names:[]});return s.date===today?new Set(s.names):new Set()})(),
+  current:null, spinning:false
+};
+const $=id=>document.getElementById(id);
+
+function recentNames(){
+  const cut=Date.now()-3*864e5;
+  return new Set(state.history.filter(h=>new Date(h.date).getTime()>=cut).map(h=>h.name));
+}
+function filtered(){
+  return DATA.filter(r=>state.cats.has(r.cat)&&r.walk<=state.walk&&(!$("optCheap").checked||r.price===1));
+}
+function pool(){
+  const rec=$("optRecent").checked?recentNames():new Set();
+  return filtered().filter(r=>!state.skip.has(r.name)&&!rec.has(r.name));
+}
+function mapUrl(r){return "https://place.map.kakao.com/"+r.kid}
+
+function renderControls(){
+  const cats=$("cats");
+  CATS.forEach(c=>{
+    const b=document.createElement("button");b.className="chip";b.textContent=CAT_LABEL[c]||c;b.id="cat-"+c;
+    b.setAttribute("aria-pressed",state.cats.has(c));
+    b.onclick=()=>{state.cats.has(c)?state.cats.delete(c):state.cats.add(c);b.setAttribute("aria-pressed",state.cats.has(c));store.set("lunch.cats2",[...state.cats]);render()};
+    cats.appendChild(b);
+  });
+  const w=$("walks");
+  WALKS.forEach(([v,l])=>{
+    const b=document.createElement("button");b.className="chip";b.textContent=l;b.dataset.v=v;b.id="walk-"+v;
+    b.onclick=()=>{state.walk=v;store.set("lunch.walk3",v);render()};
+    w.appendChild(b);
+  });
+  $("optRecent").onchange=render;$("optCheap").onchange=render;
+}
+
+function render(){
+  document.querySelectorAll("#walks .chip").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.v===state.walk));
+  const list=filtered(), p=pool(), rec=$("optRecent").checked?recentNames():new Set();
+  $("count").textContent=`${p.length} / ${list.length}곳`;
+  if(!state.current&&!state.spinning) $("poolInfo").textContent=p.length?`후보 ${p.length}곳 중에서 뽑아요`:"조건에 맞는 식당이 없어요. 종류나 도보 거리를 넓혀보세요.";
+  $("spin").disabled=!p.length||state.spinning;
+  const ul=$("list");ul.innerHTML="";
+  if(!list.length){ul.innerHTML='<li class="empty">조건에 맞는 식당이 없어요.</li>';return}
+  list.forEach(r=>{
+    const off=state.skip.has(r.name), isRec=rec.has(r.name);
+    const li=document.createElement("li");li.className="item"+(off||isRec?" off":"");
+    li.innerHTML=`<span class="nm"><a href="${mapUrl(r)}" target="_blank" rel="noopener"></a></span>
+      <span class="ds">${r.cat} · ${r.menu} · <span class="w">도보 ${r.walk}분</span>${r.area==="야탑역 쪽"?" · 야탑역 쪽":""}${r.price===1?" · 가성비":""}${isRec?" · 최근 먹음":""}</span>
+      <button type="button"></button>`;
+    li.querySelector("a").textContent=r.name;
+    const b=li.querySelector("button");b.textContent=off?"다시 넣기":"오늘 제외";
+    b.onclick=()=>{off?state.skip.delete(r.name):state.skip.add(r.name);store.set("lunch.skip",{date:today,names:[...state.skip]});render()};
+    ul.appendChild(li);
+  });
+}
+
+function showResult(r){
+  state.current=r;
+  $("reelName").textContent=r.name;
+  $("meta").innerHTML=`<span class="tag">${r.cat}</span><span><b>${r.menu}</b></span><span>도보 약 <b>${r.walk}분</b></span><span>${r.area}</span>${r.price===1?"<span>가성비</span>":""}`;
+  $("mapLink").href=mapUrl(r);$("mapLink").hidden=false;
+  $("decide").hidden=false;$("decide").textContent="여기로 결정";$("decide").disabled=false;
+  $("spin").textContent="다시 뽑기";
+  $("hint").hidden=true;
+}
+
+function spin(){
+  const p=pool(); if(!p.length||state.spinning) return;
+  state.spinning=true; state.current=null; render();
+  const reel=$("reel"), name=$("reelName"); reel.classList.add("spinning");
+  $("mapLink").hidden=true;$("decide").hidden=true;
+  $("meta").innerHTML='<span>고르는 중…</span>';
+  const pick=p[Math.floor(Math.random()*p.length)];
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const steps=reduce?1:18; let i=0, delay=50;
+  const tick=()=>{
+    if(i<steps-1){name.textContent=p[Math.floor(Math.random()*p.length)].name;i++;delay*=1.13;setTimeout(tick,delay)}
+    else{reel.classList.remove("spinning");state.spinning=false;showResult(pick);render()}
+  };
+  tick();
+}
+
+function decide(){
+  const r=state.current;if(!r)return;
+  state.history=state.history.filter(h=>h.date!==today).concat({name:r.name,date:today}).slice(-30);
+  store.set("lunch.history",state.history);
+  $("decide").textContent="결정 완료";$("decide").disabled=true;
+  $("hint").textContent=`오늘 점심은 ${r.name}. 3일 동안은 뽑기 후보에서 빠져요.`;$("hint").hidden=false;
+  render();
+}
+
+$("tkNo").textContent=today.replace(/-/g,".");
+$("spin").onclick=spin;$("decide").onclick=decide;
+renderControls();render();
+</script>
+
+</body>
+</html>
